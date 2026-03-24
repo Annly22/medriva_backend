@@ -28,10 +28,10 @@ dotenv.config();
 ////////////////////////////////////////////////////////
 
 const db = await mysql.createPool({
-  host: "localhost",
-  user: "root",
-  password: "hehe@123",
-  database: "medriva",
+  host: process.env.DB_HOST || "localhost",
+  user: process.env.DB_USER || "root",
+  password: process.env.DB_PASSWORD || "hehe@123",
+  database: process.env.DB_NAME || "medriva",
 });
 
 //rag initialisation//
@@ -48,7 +48,7 @@ async function initRAG() {
 }));
 
   pdfQA = await new PdfQA({
-    model: "llama3",
+  model: null, // disable LLM
     pdfDocuments: pdfDocs,
     chunkSize: 500,
     chunkOverlap: 50,
@@ -474,9 +474,9 @@ app.get("/analyse-health/:userId", async (req, res) => {
     }
 
     const user = userRows[0];
-    if (userId == 2) {
-  await fetchFitbitData(db, userId); // 👈 add this
-}
+    const simulate = req.query.simulate;
+
+await fetchFitbitData(db, userId, simulate);
     const vitalsData = await getLatestVitals(db, userId);
     console.log("🔥 USER ID:", userId);
 console.log("🔥 VITALS DATA:", vitalsData);
@@ -513,6 +513,8 @@ console.log("🔥 VITALS DATA:", vitalsData);
 });
 
 await initRAG();
-app.listen(3000, "0.0.0.0", () => {
-  console.log("✅ Backend running on http://localhost:3000");
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`✅ Backend running on port ${PORT}`);
 });
