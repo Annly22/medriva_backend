@@ -11,7 +11,7 @@ function predictHeartRisk(features) {
   return new Promise((resolve, reject) => {
     const script = path.join(process.cwd(), "ai/predict.py");
 
-    execFile("python", [script, ...features.map(String)], (error, stdout) => {
+    execFile("python3", [script, ...features.map(String)], (error, stdout) => {
       if (error) return reject(error);
 
       try {
