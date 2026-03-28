@@ -1,5 +1,5 @@
 fastapi
-uvicorn
-joblib
+uvicorn[standard]
 numpy
+joblib
 scikit-learn
