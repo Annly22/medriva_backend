@@ -7,7 +7,7 @@ app.use(cors());
 app.use(express.json());
 
 ////////////////////////////////////////////////////////
-// 🤖 PYTHON ML CALL (FINAL FIXED VERSION)
+// 🤖 PYTHON ML CALL
 ////////////////////////////////////////////////////////
 
 function predictHeartRisk(features) {
@@ -64,7 +64,7 @@ async function evaluateRisk(user) {
 }
 
 ////////////////////////////////////////////////////////
-// 🌐 API ROUTE
+// 🌐 API ROUTE (DEBUG ENABLED)
 ////////////////////////////////////////////////////////
 
 app.get("/analyse-health/:id", async (req, res) => {
@@ -86,13 +86,18 @@ app.get("/analyse-health/:id", async (req, res) => {
     });
 
   } catch (err) {
-    console.error("API ERROR:", err);
-    res.status(500).json({ error: "Server error" });
+    console.error("REAL ERROR:", err);
+
+    res.status(500).json({
+      error: "Server error",
+      details: err.message || err.toString(),
+      stack: err.stack
+    });
   }
 });
 
 ////////////////////////////////////////////////////////
-// 🚀 SERVER START (RENDER SAFE)
+// 🚀 SERVER START
 ////////////////////////////////////////////////////////
 
 const PORT = process.env.PORT || 3000;
