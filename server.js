@@ -7,33 +7,40 @@ app.use(cors());
 app.use(express.json());
 
 ////////////////////////////////////////////////////////
-// 🤖 PYTHON ML CALL
+// 🤖 PYTHON ML CALL (FIXED ENV)
 ////////////////////////////////////////////////////////
 
 function predictHeartRisk(features) {
   return new Promise((resolve, reject) => {
-    execFile("python3", ["./ai/predict.py", ...features.map(String)], (error, stdout, stderr) => {
-      
-      console.log("STDOUT:", stdout);
-      console.log("STDERR:", stderr);
+    execFile(
+      "python3",
+      ["./ai/predict.py", ...features.map(String)],
+      {
+        env: process.env  // 🔥 IMPORTANT FIX
+      },
+      (error, stdout, stderr) => {
+        
+        console.log("STDOUT:", stdout);
+        console.log("STDERR:", stderr);
 
-      if (error) {
-        console.error("ERROR:", error);
-        return reject(error);
-      }
+        if (error) {
+          console.error("ERROR:", error);
+          return reject(error);
+        }
 
-      if (!stdout) {
-        return reject(new Error("No output from Python"));
-      }
+        if (!stdout) {
+          return reject(new Error("No output from Python"));
+        }
 
-      try {
-        const result = JSON.parse(stdout);
-        resolve(result);
-      } catch (err) {
-        console.error("PARSE ERROR:", stdout);
-        reject(err);
+        try {
+          const result = JSON.parse(stdout);
+          resolve(result);
+        } catch (err) {
+          console.error("PARSE ERROR:", stdout);
+          reject(err);
+        }
       }
-    });
+    );
   });
 }
 
@@ -64,7 +71,7 @@ async function evaluateRisk(user) {
 }
 
 ////////////////////////////////////////////////////////
-// 🌐 API ROUTE (DEBUG ENABLED)
+// 🌐 API ROUTE
 ////////////////////////////////////////////////////////
 
 app.get("/analyse-health/:id", async (req, res) => {
@@ -90,8 +97,7 @@ app.get("/analyse-health/:id", async (req, res) => {
 
     res.status(500).json({
       error: "Server error",
-      details: err.message || err.toString(),
-      stack: err.stack
+      details: err.message || err.toString()
     });
   }
 });
