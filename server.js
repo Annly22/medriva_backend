@@ -7,40 +7,38 @@ app.use(cors());
 app.use(express.json());
 
 ////////////////////////////////////////////////////////
-// 🤖 PYTHON ML CALL (FIXED ENV)
+// 🚀 START SERVER FIRST (VERY IMPORTANT)
+////////////////////////////////////////////////////////
+
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`✅ Server running on port ${PORT}`);
+});
+
+////////////////////////////////////////////////////////
+// 🤖 PYTHON ML CALL
 ////////////////////////////////////////////////////////
 
 function predictHeartRisk(features) {
   return new Promise((resolve, reject) => {
-    execFile(
-      "python3",
-      ["./ai/predict.py", ...features.map(String)],
-      {
-        env: process.env  // 🔥 IMPORTANT FIX
-      },
-      (error, stdout, stderr) => {
-        
-        console.log("STDOUT:", stdout);
-        console.log("STDERR:", stderr);
+    execFile("python3", ["./ai/predict.py", ...features.map(String)], (error, stdout, stderr) => {
 
-        if (error) {
-          console.error("ERROR:", error);
-          return reject(error);
-        }
+      console.log("STDOUT:", stdout);
+      console.log("STDERR:", stderr);
 
-        if (!stdout) {
-          return reject(new Error("No output from Python"));
-        }
-
-        try {
-          const result = JSON.parse(stdout);
-          resolve(result);
-        } catch (err) {
-          console.error("PARSE ERROR:", stdout);
-          reject(err);
-        }
+      if (error) {
+        console.error("ERROR:", error);
+        return reject(error);
       }
-    );
+
+      try {
+        const result = JSON.parse(stdout);
+        resolve(result);
+      } catch (err) {
+        reject(err);
+      }
+    });
   });
 }
 
@@ -96,18 +94,7 @@ app.get("/analyse-health/:id", async (req, res) => {
     console.error("REAL ERROR:", err);
 
     res.status(500).json({
-      error: "Server error",
-      details: err.message || err.toString()
+      error: err.message || "Server error"
     });
   }
-});
-
-////////////////////////////////////////////////////////
-// 🚀 SERVER START
-////////////////////////////////////////////////////////
-
-const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`✅ Server running on port ${PORT}`);
 });
