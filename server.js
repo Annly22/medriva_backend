@@ -7,23 +7,13 @@ app.use(cors());
 app.use(express.json());
 
 ////////////////////////////////////////////////////////
-// 🚀 START SERVER FIRST
-////////////////////////////////////////////////////////
-
-const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`✅ Server running on port ${PORT}`);
-});
-
-////////////////////////////////////////////////////////
-// 🤖 PYTHON ML CALL (FIXED FOR RENDER ENV)
+// 🤖 PYTHON ML CALL
 ////////////////////////////////////////////////////////
 
 function predictHeartRisk(features) {
   return new Promise((resolve, reject) => {
     execFile(
-      "/opt/render/project/.venv/bin/python",
+      "python3",
       ["./ai/predict.py", ...features.map(String)],
       (error, stdout, stderr) => {
 
@@ -106,4 +96,14 @@ app.get("/analyse-health/:id", async (req, res) => {
       error: err.message || "Server error"
     });
   }
+});
+
+////////////////////////////////////////////////////////
+// 🚀 SERVER START
+////////////////////////////////////////////////////////
+
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`✅ Server running on port ${PORT}`);
 });
