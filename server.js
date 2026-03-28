@@ -7,17 +7,23 @@ app.use(cors());
 app.use(express.json());
 
 ////////////////////////////////////////////////////////
-// 🤖 PYTHON ML CALL
+// 🤖 PYTHON ML CALL (FINAL FIXED VERSION)
 ////////////////////////////////////////////////////////
 
 function predictHeartRisk(features) {
   return new Promise((resolve, reject) => {
-    execFile("python3", ["ai/predict.py", ...features.map(String)], (error, stdout, stderr) => {
+    execFile("python3", ["./ai/predict.py", ...features.map(String)], (error, stdout, stderr) => {
       
+      console.log("STDOUT:", stdout);
+      console.log("STDERR:", stderr);
+
       if (error) {
         console.error("ERROR:", error);
-        console.error("STDERR:", stderr);
         return reject(error);
+      }
+
+      if (!stdout) {
+        return reject(new Error("No output from Python"));
       }
 
       try {
@@ -86,7 +92,7 @@ app.get("/analyse-health/:id", async (req, res) => {
 });
 
 ////////////////////////////////////////////////////////
-// 🚀 SERVER START (IMPORTANT FOR RENDER)
+// 🚀 SERVER START (RENDER SAFE)
 ////////////////////////////////////////////////////////
 
 const PORT = process.env.PORT || 3000;
