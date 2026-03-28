@@ -7,7 +7,7 @@ app.use(cors());
 app.use(express.json());
 
 ////////////////////////////////////////////////////////
-// 🚀 START SERVER FIRST (VERY IMPORTANT)
+// 🚀 START SERVER FIRST
 ////////////////////////////////////////////////////////
 
 const PORT = process.env.PORT || 3000;
@@ -17,28 +17,37 @@ app.listen(PORT, "0.0.0.0", () => {
 });
 
 ////////////////////////////////////////////////////////
-// 🤖 PYTHON ML CALL
+// 🤖 PYTHON ML CALL (FIXED FOR RENDER ENV)
 ////////////////////////////////////////////////////////
 
 function predictHeartRisk(features) {
   return new Promise((resolve, reject) => {
-    execFile("python3", ["./ai/predict.py", ...features.map(String)], (error, stdout, stderr) => {
+    execFile(
+      "/opt/render/project/.venv/bin/python",
+      ["./ai/predict.py", ...features.map(String)],
+      (error, stdout, stderr) => {
 
-      console.log("STDOUT:", stdout);
-      console.log("STDERR:", stderr);
+        console.log("STDOUT:", stdout);
+        console.log("STDERR:", stderr);
 
-      if (error) {
-        console.error("ERROR:", error);
-        return reject(error);
+        if (error) {
+          console.error("ERROR:", error);
+          return reject(error);
+        }
+
+        if (!stdout) {
+          return reject(new Error("No output from Python"));
+        }
+
+        try {
+          const result = JSON.parse(stdout);
+          resolve(result);
+        } catch (err) {
+          console.error("PARSE ERROR:", stdout);
+          reject(err);
+        }
       }
-
-      try {
-        const result = JSON.parse(stdout);
-        resolve(result);
-      } catch (err) {
-        reject(err);
-      }
-    });
+    );
   });
 }
 
