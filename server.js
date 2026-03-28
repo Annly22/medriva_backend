@@ -7,13 +7,13 @@ app.use(cors());
 app.use(express.json());
 
 ////////////////////////////////////////////////////////
-// 🤖 PYTHON ML CALL
+// 🤖 PYTHON ML CALL (RENDER FIX)
 ////////////////////////////////////////////////////////
 
 function predictHeartRisk(features) {
   return new Promise((resolve, reject) => {
     execFile(
-      "python3",
+      "python",
       ["./ai/predict.py", ...features.map(String)],
       (error, stdout, stderr) => {
 
