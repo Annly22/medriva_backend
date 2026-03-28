@@ -1,11 +1,15 @@
 from fastapi import FastAPI
 import joblib
 import numpy as np
+import os
 
 app = FastAPI()
 
-# Load your model
-model = joblib.load("ai/heart_model.pkl")
+# Fix path for Railway
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_PATH = os.path.join(BASE_DIR, "ai", "heart_model.pkl")
+
+model = joblib.load(MODEL_PATH)
 
 @app.get("/")
 def home():
