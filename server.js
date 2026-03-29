@@ -1,25 +1,9 @@
 import express from "express";
 import cors from "cors";
-import mysql from "mysql2/promise";
-import dotenv from "dotenv";
-dotenv.config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
-
-////////////////////////////////////////////////////////
-// 🗄️ DATABASE CONNECTION
-////////////////////////////////////////////////////////
-
-const db = await mysql.createPool({
-  host: process.env.DB_HOST || "localhost",
-  user: process.env.DB_USER || "root",
-  password: process.env.DB_PASSWORD || "",
-  database: process.env.DB_NAME || "medriva",
-  waitForConnections: true,
-  connectionLimit: 10
-});
 
 ////////////////////////////////////////////////////////
 // 🧠 HELPER FUNCTIONS
@@ -36,28 +20,29 @@ function normalize(val, min, max) {
 }
 
 ////////////////////////////////////////////////////////
-// 🧠 DB-TUNED RISK MODEL
+// 🧠 SMART RISK MODEL (NO DB)
 ////////////////////////////////////////////////////////
 
 function predictHeartRisk(user, vitals) {
   return new Promise((resolve) => {
-    const age = user.age || 30;
-    const height = user.height || 165;
-    const weight = user.weight || 60;
+    const age = user.age;
+    const height = user.height;
+    const weight = user.weight;
 
     const heartRate =
-  vitals.heart_rate !== null && vitals.heart_rate !== undefined
-    ? vitals.heart_rate
-    : 80;
+      vitals.heart_rate !== null && vitals.heart_rate !== undefined
+        ? vitals.heart_rate
+        : 80;
 
-const steps =
-  vitals.steps !== null && vitals.steps !== undefined
-    ? vitals.steps
-    : 2000;
+    const steps =
+      vitals.steps !== null && vitals.steps !== undefined
+        ? vitals.steps
+        : 2000;
+
     const bmi = calculateBMI(height, weight);
 
     ////////////////////////////////////////////////////////
-    // 📊 NORMALIZATION (BASED ON YOUR DB)
+    // 📊 NORMALIZATION
     ////////////////////////////////////////////////////////
 
     const ageN = normalize(age, 20, 65);
@@ -66,7 +51,7 @@ const steps =
     const stepsN = normalize(steps, 0, 5000);
 
     ////////////////////////////////////////////////////////
-    // 🧠 WEIGHTED RISK
+    // 🧠 WEIGHTED SCORING
     ////////////////////////////////////////////////////////
 
     let risk =
@@ -116,13 +101,33 @@ const steps =
 async function evaluateRisk(user, vitals) {
   let score = 0;
 
-  if (vitals.heart_rate > 95) score++;
   if (vitals.steps < 3000) score++;
+  if (vitals.heart_rate && vitals.heart_rate > 95) score++;
   if (calculateBMI(user.height, user.weight) > 25) score++;
 
   const ml = await predictHeartRisk(user, vitals);
-
   const probability = ml.risk_probability;
+
+  const reasons = [];
+
+  if (vitals.steps < 3000) reasons.push("Low daily activity");
+  if (vitals.heart_rate == null) reasons.push("Missing heart rate data");
+  if (calculateBMI(user.height, user.weight) > 25)
+    reasons.push("High BMI");
+  if (calculateBMI(user.height, user.weight) < 18.5)
+    reasons.push("Low BMI");
+
+  let insight = "";
+
+  if (probability > 75) {
+    insight =
+      "High cardiovascular risk. Immediate lifestyle changes recommended.";
+  } else if (probability > 45) {
+    insight =
+      "Moderate risk. Increase activity and monitor vitals.";
+  } else {
+    insight = "Low risk. Maintain current lifestyle.";
+  }
 
   return {
     score,
@@ -132,71 +137,42 @@ async function evaluateRisk(user, vitals) {
         ? "High"
         : probability > 45
         ? "Moderate"
-        : "Low"
+        : "Low",
+    reasons,
+    insight
   };
 }
 
 ////////////////////////////////////////////////////////
-// 🌐 API ROUTE (REAL DB DATA)
+// 🌐 API ROUTE
 ////////////////////////////////////////////////////////
 
 app.get("/analyse-health/:id", async (req, res) => {
   try {
-    const userId = req.params.id;
-
     ////////////////////////////////////////////////////////
-    // 👤 GET USER
+    // 🔁 HARDCODED DATA (SIMULATED USER)
     ////////////////////////////////////////////////////////
 
-    const [users] = await db.query(
-      "SELECT * FROM users WHERE id = ?",
-      [userId]
-    );
+    const user = {
+      id: req.params.id,
+      age: 21,
+      sex: "Female",
+      height: 152,
+      weight: 45
+    };
 
-    if (users.length === 0) {
-      return res.status(404).json({ error: "User not found" });
-    }
+    const vitals = {
+      heart_rate: null,
+      steps: 741
+    };
 
-    const user = users[0];
-
-    ////////////////////////////////////////////////////////
-    // ❤️ GET LATEST VITALS
-    ////////////////////////////////////////////////////////
-
-    const [vitalsRows] = await db.query(
-      `SELECT * FROM fitbit_vitals 
-       WHERE user_id = ? 
-       ORDER BY recorded_at DESC 
-       LIMIT 1`,
-      [userId]
-    );
-
-    if (vitalsRows.length === 0) {
-      return res.status(404).json({ error: "No vitals found" });
-    }
-
-    const vitals = vitalsRows[0];
-
-    ////////////////////////////////////////////////////////
-    // 🧠 CALCULATE RISK
     ////////////////////////////////////////////////////////
 
     const risk = await evaluateRisk(user, vitals);
 
-    ////////////////////////////////////////////////////////
-
     res.json({
-      user: {
-        id: user.id,
-        age: user.age,
-        sex: user.sex,
-        height: user.height,
-        weight: user.weight
-      },
-      vitals: {
-        heart_rate: vitals.heart_rate,
-        steps: vitals.steps
-      },
+      user,
+      vitals,
       risk
     });
 
@@ -207,6 +183,14 @@ app.get("/analyse-health/:id", async (req, res) => {
       error: err.message || "Server error"
     });
   }
+});
+
+////////////////////////////////////////////////////////
+// 🟢 ROOT ROUTE (IMPORTANT FOR RAILWAY)
+////////////////////////////////////////////////////////
+
+app.get("/", (req, res) => {
+  res.send("Backend running ✅");
 });
 
 ////////////////////////////////////////////////////////
